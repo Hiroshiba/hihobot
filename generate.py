@@ -1,19 +1,12 @@
-from hihobot.data import load_doc2vec_model, make_janome_model, to_words, to_vec
-
 import argparse
-import glob
 import re
-from functools import partial
-from itertools import starmap
 from pathlib import Path
-from typing import List
 
 import numpy as np
 
 from hihobot.config import create_from_json as create_config
-from hihobot.dataset import _load_char, _load_text
-from hihobot.generator import Generator
-from hihobot.transoformer import Transformer
+from hihobot.dataset import _load_text
+from hihobot.hihobot import Hihobot
 from hihobot.utility import save_arguments
 
 
@@ -56,24 +49,19 @@ def generate(
     save_arguments(arguments, output / 'arguments.json')
 
     config = create_config(model_config)
-
-    chars = _load_char(char_path if char_path is not None else Path(config.dataset.char_path))
-    transformer = Transformer(chars=chars)
-
     model_path = _get_predictor_model_path(
         model_dir=model_dir,
         iteration=model_iteration,
     )
-    generator = Generator(
-        config,
-        model_path,
-        transformer=transformer,
+    hihobot = Hihobot(
+        model_path=model_path,
+        model_config=model_config,
+        char_path=char_path,
+        doc2vec_model_path=doc2vec_model_path,
+        max_length=max_length,
+        sampling_maximum=sampling_maximum,
         gpu=gpu,
     )
-    print(f'Loaded generator "{model_path}"')
-
-    load_doc2vec_model(doc2vec_model_path if doc2vec_model_path is not None else config.dataset.doc2vec_model_path)
-    make_janome_model()
 
     if text_path is None:
         text_path = Path(config.dataset.text_path)
@@ -84,13 +72,9 @@ def generate(
     texts = texts[:num_test]
 
     for i, text in enumerate(texts):
-        words = to_words(text)
-        vec = to_vec(words)
-
-        out_text = generator.generate(
+        vec = hihobot.text_to_vec(text)
+        out_text = hihobot.generate(
             vec=vec,
-            max_length=max_length,
-            sampling_maximum=sampling_maximum,
         )
 
         print('correct:', text)
