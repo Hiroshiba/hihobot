@@ -11,6 +11,7 @@ from gensim.models.doc2vec import Doc2Vec
 from janome.tokenizer import Tokenizer
 
 from hihobot.config import DatasetConfig
+from hihobot.data import make_janome_model, load_doc2vec_model, to_words, to_vec
 from hihobot.transoformer import Transformer
 
 
@@ -34,21 +35,17 @@ class CharIdsDataset(chainer.dataset.DatasetMixin):
             self,
             texts: List[str],
             transformer: Transformer,
-            doc2vec_model: Doc2Vec,
-            janome_model: Tokenizer,
     ):
         self.texts = texts
         self.transformer = transformer
-        self.doc2vec_model = doc2vec_model
-        self.janome_model = janome_model
 
     def __len__(self):
         return len(self.texts)
 
     def get_example(self, i):
         text = self.texts[i]
-        words = [t.surface for t in self.janome_model.tokenize(text)]
-        vec = self.doc2vec_model.infer_vector(words)
+        words = to_words(text)
+        vec = to_vec(words)
 
         char_ids = [self.transformer.to_char_id(c) for word in words for c in word]
 
@@ -71,19 +68,17 @@ def create(config: DatasetConfig):
     chars = _load_char(Path(config.char_path))
     transformer = Transformer(chars=chars)
 
+    load_doc2vec_model(config.doc2vec_model_path)
+    make_janome_model()
+
     num_test = config.num_test
     trains = texts[num_test:]
     tests = texts[:num_test]
     evals = trains[:num_test]
 
-    doc2vec_model = Doc2Vec.load(str(config.doc2vec_model_path))
-    janome_model = Tokenizer()
-
     _Dataset = partial(
         CharIdsDataset,
         transformer=transformer,
-        doc2vec_model=doc2vec_model,
-        janome_model=janome_model,
     )
     return {
         'train': _Dataset(trains),

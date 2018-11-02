@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Optional
 
 import chainer
 import chainer.functions as F
@@ -7,7 +7,7 @@ import numpy as np
 
 
 class DeepLSTM(chainer.Chain):
-    def __init__(self, n_layers: int, in_size: int, hidden_size: int, out_size: int, dropout=0.2):
+    def __init__(self, n_layers: int, in_size: int, hidden_size: int, out_size: int, dropout: float):
         super().__init__()
 
         with self.init_scope():
@@ -28,7 +28,30 @@ class DeepLSTM(chainer.Chain):
         sections = np.cumsum([len(h) for h in hs])
 
         hs = F.concat(hs, axis=0)  # shape: (all_length, ?)
-        hs = self.post_linear(hs)  # shape: (all_length, ?)
+        hs = self.post_linear(hs)  # shape: (all_length, num_id)
 
-        hs = F.split_axis(hs, sections, axis=0)  # shape: List[(length, ?)]
+        hs = F.split_axis(hs, sections, axis=0)  # shape: List[(length, num_id)]
         return hs
+
+    def forward_one(
+            self,
+            hs: Optional[chainer.Variable],
+            cs: Optional[chainer.Variable],
+            x: Union[np.ndarray, chainer.Variable],
+    ):
+        """
+        :param hs:
+        :param cs:
+        :param x: shape: (batch, ?)
+        :return:
+            hs:
+            cs:
+            x: shape: (batch, num_id)
+        """
+        x = F.expand_dims(x, axis=1)  # shape: (batch, 1, ?)
+        xs = F.separate(x, axis=0)  # shape: List[(1, ?)]
+        hs, cs, xs = self.lstm(hx=hs, cx=cs, xs=xs)  # shape: List[(1, ?)]
+
+        x = F.concat(xs, axis=0)  # shape: (batch, ?)
+        x = self.post_linear(x)  # shape: (batch, num_id)
+        return hs, cs, x

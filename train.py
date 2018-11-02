@@ -4,8 +4,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from chainer import cuda, optimizer_hooks, optimizers, training
-from chainer.iterators import SerialIterator
-from chainer.training import extensions
+from chainer.iterators import MultiprocessIterator
 from chainer.training.updaters import StandardUpdater
 from tb_chainer import SummaryWriter
 
@@ -20,9 +19,12 @@ parser.add_argument('config_json_path', type=Path)
 parser.add_argument('output', type=Path)
 arguments = parser.parse_args()
 
-config = create_from_json(arguments.config_json_path)
-arguments.output.mkdir(exist_ok=True)
-config.save_as_json((arguments.output / 'config.json').absolute())
+config_json_path: Path = arguments.config_json_path
+output: Path = arguments.output
+
+config = create_from_json(config_json_path)
+output.mkdir(exist_ok=True, parents=True)
+config.save_as_json((output / 'config.json').absolute())
 
 # model
 predictor = create_predictor(config.network)
@@ -34,9 +36,9 @@ if config.train.gpu is not None:
 
 # dataset
 dataset = create_dataset(config.dataset)
-train_iter = SerialIterator(dataset['train'], config.train.batchsize, repeat=True, shuffle=True)
-test_iter = SerialIterator(dataset['test'], config.train.batchsize, repeat=False, shuffle=False)
-train_eval_iter = SerialIterator(dataset['train_eval'], config.train.batchsize, repeat=False, shuffle=False)
+train_iter = MultiprocessIterator(dataset['train'], config.train.batchsize, repeat=True, shuffle=True)
+test_iter = MultiprocessIterator(dataset['test'], config.train.batchsize, repeat=False, shuffle=False)
+train_eval_iter = MultiprocessIterator(dataset['train_eval'], config.train.batchsize, repeat=False, shuffle=False)
 
 
 # optimizer

@@ -6,9 +6,9 @@ from hihobot.utility import JSONEncoder
 
 
 class DatasetConfig(NamedTuple):
-    char_path: Path
-    text_path: Path
-    doc2vec_model_path: Path
+    char_path: str
+    text_path: str
+    doc2vec_model_path: str
     seed: int
     num_test: int
 
@@ -18,6 +18,7 @@ class NetworkConfig(NamedTuple):
     in_size: int
     hidden_size: int
     out_size: int
+    dropout: float
 
 
 class LossConfig(NamedTuple):
@@ -75,6 +76,7 @@ def create_from_json(s: Union[str, Path]):
             in_size=d['network']['in_size'],
             hidden_size=d['network']['hidden_size'],
             out_size=d['network']['out_size'],
+            dropout=d['network']['dropout'],
         ),
         loss=LossConfig(
         ),
@@ -95,4 +97,5 @@ def create_from_json(s: Union[str, Path]):
 
 
 def backward_compatible(d: Dict):
-    pass
+    if 'dropout' not in d['network']:
+        d['network']['dropout'] = 0.2

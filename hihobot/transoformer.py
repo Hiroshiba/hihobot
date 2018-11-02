@@ -8,16 +8,29 @@ class Transformer(object):
         self.chars = chars
 
         self._char_to_index = {c: i for i, c in enumerate(chars)}
+        self._index_to_char = {i: c for i, c in enumerate(chars)}
         self._end_id = len(chars)
-        self._num_chars = len(chars)
+        self._num_char = len(chars)
         self._num_id = len(chars) + 1
-        self._start_array = np.zeros(self._num_chars, dtype=np.float32)
+        self._start_array = np.zeros(self._num_char, dtype=np.float32)
 
-    def to_char_id(self, char: str):
+    def get_end_id(self):
+        return self._end_id
+
+    def get_num_id(self):
+        return self._num_id
+
+    def get_start_array(self):  # shape: (num_char, )
+        return self._start_array
+
+    def to_char_id(self, char: str) -> int:
         return self._char_to_index[char]
 
+    def to_char(self, char_id: int) -> str:
+        return self._index_to_char[char_id]
+
     def to_array(self, char_id: int):
-        array = np.zeros(self._num_chars, dtype=np.float32)
+        array = np.zeros(self._num_char, dtype=np.float32)
         array[char_id] = 1
         return array
 

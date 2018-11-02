@@ -8,12 +8,13 @@ from hihobot.config import LossConfig, NetworkConfig
 from hihobot.network import DeepLSTM
 
 
-def create_predictor(config: NetworkConfig):
+def create_predictor(config: NetworkConfig, train=True):
     predictor = DeepLSTM(
         n_layers=config.n_layers,
         in_size=config.in_size,
         hidden_size=config.hidden_size,
         out_size=config.out_size,
+        dropout=config.dropout if train else 0.0,
     )
     return predictor
 
