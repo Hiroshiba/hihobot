@@ -1,18 +1,15 @@
-from functools import partial
 import json
 from functools import partial
 from pathlib import Path
-from typing import List, Dict, NamedTuple
+from typing import Dict, List, NamedTuple
 
 import chainer
 import ndjson
 import numpy as np
-from gensim.models.doc2vec import Doc2Vec
-from janome.tokenizer import Tokenizer
 
 from hihobot.config import DatasetConfig
-from hihobot.data import make_janome_model, load_doc2vec_model, to_words, to_vec
 from hihobot.transoformer import Transformer
+from hihobot.vectorizer import Vectorizer
 
 
 class Data(NamedTuple):
@@ -35,17 +32,19 @@ class CharIdsDataset(chainer.dataset.DatasetMixin):
             self,
             texts: List[str],
             transformer: Transformer,
+            vectorizer: Vectorizer,
     ):
         self.texts = texts
         self.transformer = transformer
+        self.vectorizer = vectorizer
 
     def __len__(self):
         return len(self.texts)
 
     def get_example(self, i):
         text = self.texts[i]
-        words = to_words(text)
-        vec = to_vec(words)
+        words = self.vectorizer.to_words(text)
+        vec = self.vectorizer.to_vec(words)
 
         char_ids = [self.transformer.to_char_id(c) for word in words for c in word]
 
@@ -68,8 +67,7 @@ def create(config: DatasetConfig):
     chars = _load_char(Path(config.char_path))
     transformer = Transformer(chars=chars)
 
-    load_doc2vec_model(config.doc2vec_model_path)
-    make_janome_model()
+    vectorizer = Vectorizer(path_doc2vec_model=config.doc2vec_model_path)
 
     num_test = config.num_test
     trains = texts[num_test:]
@@ -79,6 +77,7 @@ def create(config: DatasetConfig):
     _Dataset = partial(
         CharIdsDataset,
         transformer=transformer,
+        vectorizer=vectorizer,
     )
     return {
         'train': _Dataset(trains),

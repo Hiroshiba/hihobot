@@ -1,16 +1,13 @@
 from pathlib import Path
-from typing import List, Union
 
 import chainer
+import chainer.functions as F
 import numpy as np
 from chainer import cuda
-import chainer.functions as F
 
 from hihobot.config import Config
-from hihobot.data import load_doc2vec_model, make_janome_model
 from hihobot.model import create_predictor
 from hihobot.transoformer import Transformer
-from hihobot.dataset import _load_char
 
 
 class Generator(object):

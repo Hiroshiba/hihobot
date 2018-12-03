@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 from chainer import cuda, optimizer_hooks, optimizers, training
 from chainer.iterators import MultiprocessIterator
+from chainer.training import extensions
 from chainer.training.updaters import StandardUpdater
 from tb_chainer import SummaryWriter
 
@@ -78,6 +79,9 @@ trigger_stop = (config.train.stop_iteration, 'iteration') if config.train.stop_i
 
 trainer = training.Trainer(updater, stop_trigger=trigger_stop, out=arguments.output)
 tb_writer = SummaryWriter(Path(arguments.output))
+
+if config.train.linear_shift is not None:
+    trainer.extend(extensions.LinearShift(**config.train.linear_shift))
 
 ext = extensions.Evaluator(test_iter, model, data_convert, device=config.train.gpu)
 trainer.extend(ext, name='test', trigger=trigger_log)

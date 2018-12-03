@@ -1,19 +1,13 @@
 from pathlib import Path
-import argparse
-import re
-from pathlib import Path
 from typing import Optional
 
 import numpy as np
 
 from hihobot.config import create_from_json as create_config
-from hihobot.data import load_doc2vec_model, make_janome_model, to_words, to_vec
-from hihobot.dataset import _load_char, _load_text
+from hihobot.dataset import _load_char
 from hihobot.generator import Generator
 from hihobot.transoformer import Transformer
-from hihobot.utility import save_arguments
-
-from hihobot.generator import Generator
+from hihobot.vectorizer import Vectorizer
 
 
 class Hihobot(object):
@@ -43,12 +37,17 @@ class Hihobot(object):
         )
         print(f'Loaded generator "{model_path}"')
 
-        load_doc2vec_model(doc2vec_model_path if doc2vec_model_path is not None else config.dataset.doc2vec_model_path)
-        make_janome_model()
+        if doc2vec_model_path is not None:
+            path_doc2vec_model = doc2vec_model_path
+        else:
+            path_doc2vec_model = config.dataset.doc2vec_model_path,
+        self._vectorizer = Vectorizer(
+            path_doc2vec_model=path_doc2vec_model
+        )
 
     def text_to_vec(self, text: str):
-        words = to_words(text)
-        vec = to_vec(words)
+        words = self._vectorizer.to_words(text)
+        vec = self._vectorizer.to_vec(words)
         return vec
 
     def generate(self, vec: np.ndarray):

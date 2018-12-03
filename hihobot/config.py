@@ -33,6 +33,7 @@ class TrainConfig(NamedTuple):
     stop_iteration: int
     optimizer: Dict[str, Any]
     optimizer_gradient_clipping: float
+    linear_shift: Dict[str, Any]
 
 
 class ProjectConfig(NamedTuple):
@@ -88,6 +89,7 @@ def create_from_json(s: Union[str, Path]):
             stop_iteration=d['train']['stop_iteration'],
             optimizer=d['train']['optimizer'],
             optimizer_gradient_clipping=d['train']['optimizer_gradient_clipping'],
+            linear_shift=d['train']['linear_shift'],
         ),
         project=ProjectConfig(
             name=d['project']['name'],
@@ -99,3 +101,6 @@ def create_from_json(s: Union[str, Path]):
 def backward_compatible(d: Dict):
     if 'dropout' not in d['network']:
         d['network']['dropout'] = 0.2
+
+    if 'linear_shift' not in d['train']:
+        d['train']['linear_shift'] = None
