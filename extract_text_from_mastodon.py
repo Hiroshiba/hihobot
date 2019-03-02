@@ -2,11 +2,9 @@ import argparse
 import html
 import json
 import re
-from collections import Counter
+from multiprocessing import Pool
 from pathlib import Path
-from typing import Dict, Any, List
-
-import ndjson
+from typing import Dict, Any
 
 
 def strip_p_tag(s: str, _re=re.compile(r"<p>(.*)</p>")):
@@ -142,44 +140,23 @@ def clean_up_text(obj: Dict[str, Any]):
     return s
 
 
-def pre_process(
-        p_output: Path,
-        num_chars: int,
-        out_text: Path,
-        out_char: Path,
+def extract_text_from_mastodon(
+        mastodon_outbox: Path,
+        output_texts: Path,
 ):
-    j = json.load(p_output.open(encoding='UTF8'))
-
-    strings = [clean_up_text(item["object"]) for item in j["orderedItems"]]
-    strings: List[str] = list(filter(None, strings))
-
-    counter = Counter("".join(strings))
-    chars = "".join(c[0] for c in counter.most_common(num_chars))
-
-    strings = list(filter(lambda s: not contain_unknown_chars(s, chars=chars), strings))
-
-    ndjson.dump([{"str": s} for s in strings], out_text.open('w', encoding='UTF8'), ensure_ascii=False)
-    json.dump([c for c in chars], out_char.open('w', encoding='UTF8'), ensure_ascii=False)
-
-    # show alphabet
-    for c in "abcdefghijklmnopqrstuvwxyz":
-        if c in chars:
-            print(c, chars.index(c))
-        else:
-            print(c, "not exist")
+    outbox = json.load(mastodon_outbox.open(encoding='UTF8'))
+    objs = [item["object"] for item in outbox["orderedItems"]]
+    texts = filter(None, Pool().map(clean_up_text, objs))
+    output_texts.open('w', encoding='UTF8').writelines([text + "\n" for text in texts])
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--mastodon_outbox', type=Path)
-    parser.add_argument('--num_chars', type=int)
-    parser.add_argument('--output_dataset_text', type=Path)
-    parser.add_argument('--output_dataset_char', type=Path)
+    parser.add_argument('--output_texts', type=Path, default=Path('texts.txt'))
     args = parser.parse_args()
 
-    pre_process(
-        p_output=args.mastodon_outbox,
-        num_chars=args.num_chars,
-        out_text=args.output_dataset_text,
-        out_char=args.output_dataset_char,
+    extract_text_from_mastodon(
+        mastodon_outbox=args.mastodon_outbox,
+        output_texts=args.output_texts,
     )

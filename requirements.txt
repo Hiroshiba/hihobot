@@ -1,0 +1,6 @@
+chainer
+ndjson
+gensim
+janome
+tensorboard-chainer
+pillow
